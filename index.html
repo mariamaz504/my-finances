@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>My Finances</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #f5efe6;
+    --card: #fffdf9;
+    --ink: #4a4038;
+    --muted: #9c8f80;
+    --line: #ece3d6;
+    --income: #7fae7a;
+    --income-bg: #eaf3e8;
+    --expense: #d98b7a;
+    --expense-bg: #f8ebe6;
+    --accent: #c9a884;
+    --accent-dark: #b08d63;
+    --peach: #f3e2d3;
+    --sage: #e4ecdf;
+    --sand: #efe4d2;
+    --blush: #f4e5e0;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 0 0 100px;
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+  .content { padding: 0 16px; }
+  .cover {
+    position: relative;
+    height: 240px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    background-size: cover;
+    background-position: center;
+    border-radius: 0 0 28px 28px;
+    display: flex;
+    align-items: flex-end;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .cover::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(74,64,56,0.55), rgba(74,64,56,0) 55%);
+  }
+  .cover-placeholder {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 64px; opacity: 0.85;
+  }
+  .cover-text {
+    position: relative;
+    padding: 20px;
+    color: #fff;
+    z-index: 1;
+  }
+  .cover-text .hi { font-size: 14px; opacity: 0.95; }
+  .cover-text .name { font-size: 24px; font-weight: 800; }
+  .cur-switch {
+    position: absolute; top: 16px; right: 16px; z-index: 2;
+    display: flex; gap: 4px;
+    background: rgba(45,37,31,0.45);
+    backdrop-filter: blur(6px);
+    border-radius: 12px; padding: 4px;
+  }
+  .cur-btn {
+    border: none; background: transparent; color: #fff;
+    padding: 6px 12px; border-radius: 9px;
+    font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+    opacity: 0.7;
+  }
+  .cur-btn.active { background: rgba(255,255,255,0.9); color: #4a3a30; opacity: 1; }
+  .balance-card {
+    background: linear-gradient(135deg, #d8bfa0, #c9a884);
+    border-radius: 24px;
+    padding: 24px;
+    color: #fff;
+    margin-bottom: 16px;
+    box-shadow: 0 8px 24px rgba(201,168,132,0.3);
+  }
+  .balance-label { font-size: 13px; opacity: 0.9; margin-bottom: 6px; }
+  .balance-amount { font-size: 38px; font-weight: 800; letter-spacing: -1px; }
+  .balance-month { font-size: 12px; opacity: 0.85; margin-top: 8px; }
+  .stats { display: flex; gap: 12px; margin-bottom: 20px; }
+  .stat {
+    flex: 1;
+    background: var(--card);
+    border-radius: 18px;
+    padding: 16px;
+  }
+  .stat-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .stat-icon {
+    width: 30px; height: 30px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; font-size: 15px;
+  }
+  .stat-icon.inc { background: var(--income-bg); }
+  .stat-icon.exp { background: var(--expense-bg); }
+  .stat-label { font-size: 12px; color: var(--muted); }
+  .stat-amount { font-size: 22px; font-weight: 700; }
+  .stat-amount.inc { color: var(--income); }
+  .stat-amount.exp { color: var(--expense); }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    margin: 4px 4px 12px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .section-title .link { font-size: 12px; color: var(--accent-dark); font-weight: 500; }
+  .categories { margin-bottom: 24px; }
+  .cat-row {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .cat-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .cat-emoji {
+    width: 34px; height: 34px; border-radius: 11px;
+    background: var(--sand);
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+  .cat-name { font-size: 14px; font-weight: 600; flex: 1; }
+  .cat-amount { font-size: 14px; font-weight: 700; color: var(--expense); }
+  .bar { height: 6px; background: var(--line); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--accent); border-radius: 4px; }
+  .history { margin-bottom: 24px; }
+  .tx {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .tx-icon {
+    width: 40px; height: 40px; border-radius: 13px;
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+    flex-shrink: 0;
+  }
+  .tx-icon.income { background: var(--income-bg); }
+  .tx-icon.expense { background: var(--expense-bg); }
+  .tx-info { flex: 1; min-width: 0; }
+  .tx-name { font-size: 14px; font-weight: 600; }
+  .tx-note { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tx-right { text-align: right; }
+  .tx-amount { font-size: 15px; font-weight: 700; }
+  .tx-amount.income { color: var(--income); }
+  .tx-amount.expense { color: var(--expense); }
+  .tx-date { font-size: 11px; color: var(--muted); }
+  /* calendar */
+  .cal-head { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; margin-bottom: 5px; }
+  .cal-dow { text-align: center; font-size: 11px; color: var(--muted); font-weight: 600; padding: 4px 0; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; margin-bottom: 18px; }
+  .cal-empty { aspect-ratio: 1; }
+  .cal-day {
+    aspect-ratio: 1; border-radius: 11px; background: var(--card);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink);
+    transition: box-shadow 0.15s;
+  }
+  .cal-day.selected { box-shadow: 0 0 0 2px var(--accent-dark); }
+  .cal-dots { display: flex; gap: 3px; margin-top: 3px; height: 5px; }
+  .cal-dot { width: 5px; height: 5px; border-radius: 50%; }
+  .cal-dot.inc { background: var(--income); }
+  .cal-dot.exp { background: var(--expense); }
+  .day-totals { display: flex; gap: 10px; margin-bottom: 12px; }
+  .day-total { flex: 1; border-radius: 13px; padding: 11px; }
+  .day-total.inc { background: var(--income-bg); }
+  .day-total.exp { background: var(--expense-bg); }
+  .day-total .lbl { font-size: 11px; margin-bottom: 3px; }
+  .day-total.inc .lbl { color: var(--income); }
+  .day-total.exp .lbl { color: var(--expense); }
+  .day-total .val { font-size: 17px; font-weight: 700; }
+  .day-total.inc .val { color: var(--income); }
+  .day-total.exp .val { color: var(--expense); }
+  .day-empty { background: var(--card); border-radius: 15px; padding: 20px; text-align: center; color: var(--muted); font-size: 13px; }
+  .day-title { font-size: 15px; font-weight: 700; margin: 4px 4px 10px; }
+  .fab {
+    position: fixed;
+    bottom: 24px; left: 50%; transform: translateX(-50%);
+    width: calc(100% - 32px); max-width: 448px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    color: #fff;
+    border: none;
+    border-radius: 18px;
+    padding: 17px;
+    font-size: 16px; font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(176,141,99,0.4);
+  }
+  .fab:active { transform: translateX(-50%) scale(0.98); }
+  /* modal */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(74,64,56,0.4);
+    display: none; align-items: flex-end;
+    z-index: 50;
+  }
+  .overlay.open { display: flex; }
+  .sheet {
+    background: var(--bg);
+    width: 100%; max-width: 480px; margin: 0 auto;
+    border-radius: 28px 28px 0 0;
+    padding: 24px 20px 32px;
+    animation: up 0.25s ease;
+  }
+  @keyframes up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .sheet-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; text-align: center; }
+  .toggle { display: flex; background: var(--line); border-radius: 14px; padding: 4px; margin-bottom: 18px; }
+  .toggle button {
+    flex: 1; border: none; background: transparent;
+    padding: 10px; border-radius: 11px; font-size: 14px; font-weight: 600;
+    color: var(--muted); cursor: pointer;
+  }
+  .toggle button.active { background: var(--card); color: var(--ink); box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+  .field { margin-bottom: 14px; }
+  .field label { font-size: 12px; color: var(--muted); margin-bottom: 6px; display: block; }
+  .field input, .field select {
+    width: 100%; border: 1px solid var(--line); background: var(--card);
+    border-radius: 13px; padding: 13px; font-size: 15px; color: var(--ink);
+    font-family: inherit;
+  }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
+  .sheet-actions { display: flex; gap: 10px; margin-top: 8px; }
+  .btn-cancel, .btn-save {
+    flex: 1; border: none; border-radius: 14px; padding: 15px;
+    font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .btn-cancel { background: var(--line); color: var(--muted); }
+  .btn-save { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: #fff; }
+  .fallback {
+    text-align: center; padding: 60px 20px; color: var(--muted);
+  }
+  .fallback .emoji { font-size: 48px; margin-bottom: 16px; }
+  .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 20px; }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+
+<button class="fab" id="fab" style="display:none" onclick="openSheet()">+ Add transaction</button>
+
+<div class="overlay" id="overlay">
+  <div class="sheet">
+    <div class="sheet-title">New transaction</div>
+    <div class="toggle">
+      <button id="tExpense" class="active" onclick="setType('expense')">Expense</button>
+      <button id="tIncome" onclick="setType('income')">Income</button>
+    </div>
+    <div class="field">
+      <label>Amount</label>
+      <input type="number" id="fAmount" placeholder="0" inputmode="decimal">
+    </div>
+    <div class="field">
+      <label>Category</label>
+      <select id="fCategory"></select>
+    </div>
+    <div class="field">
+      <label>Note (optional)</label>
+      <input type="text" id="fNote" placeholder="e.g. coffee with a friend">
+    </div>
+    <div class="sheet-actions">
+      <button class="btn-cancel" onclick="closeSheet()">Cancel</button>
+      <button class="btn-save" onclick="saveTx()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let DATA = null;
+let currentType = 'expense';
+
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+
+const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+let activeCurrency = 'USD';
+let selectedDay = null;
+
+function amt(t) {
+  // returns the transaction amount in the active currency
+  if (typeof t.amount === 'number') return t.amount;
+  if (t.amount[activeCurrency] != null) return t.amount[activeCurrency];
+  // fallback: convert from USD via rate
+  const rate = DATA.currencies[activeCurrency].rateFromUSD || 1;
+  return (t.amount.USD || 0) * rate;
+}
+
+function money(n) {
+  const c = DATA.currencies[activeCurrency];
+  const num = Math.round(n).toLocaleString('en-US');
+  return c.position === 'after' ? `${num} ${c.symbol}` : `${c.symbol}${num}`;
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  const today = new Date();
+  const yest = new Date(); yest.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return 'today';
+  if (d.toDateString() === yest.toDateString()) return 'yesterday';
+  return monthNames[d.getMonth()] + ' ' + d.getDate();
+}
+
+function catById(id) {
+  return DATA.categories.find(c => c.id === id) || { name: id, icon: '💸' };
+}
+
+function switchCurrency(code) {
+  activeCurrency = code;
+  render();
+}
+
+function render() {
+  const income = DATA.transactions.filter(t => t.type === 'income').reduce((s,t) => s + amt(t), 0);
+  const expense = DATA.transactions.filter(t => t.type === 'expense').reduce((s,t) => s + amt(t), 0);
+  const balance = income - expense;
+
+  // categories breakdown (expenses)
+  const catTotals = {};
+  DATA.transactions.filter(t => t.type === 'expense').forEach(t => {
+    catTotals[t.category] = (catTotals[t.category] || 0) + amt(t);
+  });
+  const maxCat = Math.max(1, ...Object.values(catTotals));
+  const catList = Object.entries(catTotals).sort((a,b) => b[1] - a[1]);
+
+  const cover = DATA.user.photo
+    ? `<div class="cover" style="background-image:url('${DATA.user.photo}')">`
+    : `<div class="cover"><div class="cover-placeholder">📷</div>`;
+
+  // build calendar for the month of the data
+  const monthDate = DATA.transactions.length
+    ? new Date(DATA.transactions.map(t => t.date).sort().slice(-1)[0])
+    : new Date();
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  // group transactions by day-of-month
+  const byDay = {};
+  DATA.transactions.forEach(t => {
+    const d = new Date(t.date);
+    if (d.getFullYear() === year && d.getMonth() === month) {
+      const day = d.getDate();
+      (byDay[day] = byDay[day] || []).push(t);
+    }
+  });
+
+  const dow = ['S','M','T','W','T','F','S']
+    .map(d => `<div class="cal-dow">${d}</div>`).join('');
+
+  let cells = '';
+  for (let i = 0; i < firstDow; i++) cells += '<div class="cal-empty"></div>';
+  for (let day = 1; day <= daysInMonth; day++) {
+    const items = byDay[day];
+    let dots = '';
+    if (items) {
+      if (items.some(t => t.type === 'income')) dots += '<div class="cal-dot inc"></div>';
+      if (items.some(t => t.type === 'expense')) dots += '<div class="cal-dot exp"></div>';
+    }
+    cells += `<div class="cal-day" data-day="${day}" onclick="selectDay(${day})">${day}<div class="cal-dots">${dots}</div></div>`;
+  }
+  const calendar = `<div class="cal-head">${dow}</div><div class="cal-grid">${cells}</div><div id="dayDetail"></div>`;
+
+  const cats = catList.map(([id, catAmt]) => {
+    const c = catById(id);
+    return `
+    <div class="cat-row">
+      <div class="cat-head">
+        <div class="cat-emoji">${c.icon}</div>
+        <div class="cat-name">${c.name}</div>
+        <div class="cat-amount">${money(catAmt)}</div>
+      </div>
+      <div class="bar"><div class="bar-fill" style="width:${(catAmt/maxCat*100)}%"></div></div>
+    </div>`;
+  }).join('') || '<div class="empty">No expenses yet</div>';
+
+  document.getElementById('app').innerHTML = `
+    ${cover}
+      <div class="cover-text">
+        <div class="hi">Hi 👋</div>
+        <div class="name">${DATA.user.name}</div>
+      </div>
+      <div class="cur-switch">
+        <button class="cur-btn ${activeCurrency==='USD'?'active':''}" onclick="switchCurrency('USD')">$</button>
+        <button class="cur-btn ${activeCurrency==='LBP'?'active':''}" onclick="switchCurrency('LBP')">LBP</button>
+      </div>
+    </div>
+
+    <div class="content">
+    <div class="balance-card">
+      <div class="balance-label">Current balance</div>
+      <div class="balance-amount">${money(balance)}</div>
+      <div class="balance-month">${DATA.month}</div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-top">
+          <div class="stat-icon inc">↓</div>
+          <div class="stat-label">Income</div>
+        </div>
+        <div class="stat-amount inc">${money(income)}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-top">
+          <div class="stat-icon exp">↑</div>
+          <div class="stat-label">Expenses</div>
+        </div>
+        <div class="stat-amount exp">${money(expense)}</div>
+      </div>
+    </div>
+
+    <div class="section-title">Calendar · ${DATA.month}</div>
+    <div class="calendar">${calendar}</div>
+
+    <div class="section-title">By category</div>
+    <div class="categories">${cats}</div>
+    </div>
+  `;
+  document.getElementById('fab').style.display = 'block';
+
+  // keep the previously selected day if it still has activity, else most recent
+  const daysWithActivity = Object.keys(byDay).map(Number);
+  const lastDay = Math.max(...daysWithActivity.concat([0]));
+  const dayToShow = (selectedDay && daysWithActivity.includes(selectedDay)) ? selectedDay : lastDay;
+  if (dayToShow > 0) selectDay(dayToShow);
+}
+
+function selectDay(day) {
+  selectedDay = day;
+  const monthDate = DATA.transactions.length
+    ? new Date(DATA.transactions.map(t => t.date).sort().slice(-1)[0])
+    : new Date();
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+
+  document.querySelectorAll('.cal-day').forEach(el => {
+    el.classList.toggle('selected', +el.dataset.day === day);
+  });
+
+  const items = DATA.transactions.filter(t => {
+    const d = new Date(t.date);
+    return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
+  });
+
+  const box = document.getElementById('dayDetail');
+  const label = monthNames[month] + ' ' + day;
+
+  if (!items.length) {
+    box.innerHTML = `<div class="day-empty">No transactions on ${label}</div>`;
+    return;
+  }
+
+  const inc = items.filter(t => t.type === 'income').reduce((s,t) => s + amt(t), 0);
+  const exp = items.filter(t => t.type === 'expense').reduce((s,t) => s + amt(t), 0);
+
+  let h = `<div class="day-title">${label}</div>`;
+  h += `<div class="day-totals">
+    <div class="day-total inc"><div class="lbl">Gained</div><div class="val">+${money(inc)}</div></div>
+    <div class="day-total exp"><div class="lbl">Paid</div><div class="val">−${money(exp)}</div></div>
+  </div>`;
+
+  items.forEach(t => {
+    const c = catById(t.category);
+    const sign = t.type === 'income' ? '+' : '−';
+    h += `
+    <div class="tx">
+      <div class="tx-icon ${t.type}">${c.icon}</div>
+      <div class="tx-info">
+        <div class="tx-name">${c.name}</div>
+        <div class="tx-note">${t.note || ''}</div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-amount ${t.type}">${sign}${money(amt(t))}</div>
+      </div>
+    </div>`;
+  });
+
+  box.innerHTML = h;
+}
+
+function fillCategories() {
+  const sel = document.getElementById('fCategory');
+  sel.innerHTML = DATA.categories
+    .filter(c => c.type === currentType)
+    .map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`)
+    .join('');
+}
+
+function setType(type) {
+  currentType = type;
+  document.getElementById('tExpense').classList.toggle('active', type === 'expense');
+  document.getElementById('tIncome').classList.toggle('active', type === 'income');
+  fillCategories();
+}
+
+function openSheet() {
+  currentType = 'expense';
+  setType('expense');
+  document.getElementById('fAmount').value = '';
+  document.getElementById('fNote').value = '';
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeSheet() {
+  document.getElementById('overlay').classList.remove('open');
+}
+
+function saveTx() {
+  const entered = parseFloat(document.getElementById('fAmount').value);
+  if (!entered || entered <= 0) { alert('Enter an amount'); return; }
+  const category = document.getElementById('fCategory').value;
+  const note = document.getElementById('fNote').value.trim();
+
+  // convert entered amount (in active currency) to USD, then fill both
+  const rate = DATA.currencies[activeCurrency].rateFromUSD || 1;
+  const usd = entered / rate;
+  const amount = {};
+  Object.keys(DATA.currencies).forEach(k => {
+    if (k === 'primary') return;
+    amount[k] = usd * (DATA.currencies[k].rateFromUSD || 1);
+  });
+
+  DATA.transactions.push({
+    id: Date.now(),
+    type: currentType,
+    category,
+    amount,
+    note,
+    date: new Date().toISOString().slice(0, 10)
+  });
+  closeSheet();
+  render();
+}
+
+document.getElementById('overlay').addEventListener('click', e => {
+  if (e.target.id === 'overlay') closeSheet();
+});
+
+fetch('data.json?v=' + Date.now())
+  .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+  .then(d => {
+    DATA = d;
+    if (DATA.currencies && DATA.currencies.primary) activeCurrency = DATA.currencies.primary;
+    render();
+  })
+  .catch(() => {
+    document.getElementById('app').innerHTML = `
+      <div class="content"><div class="fallback">
+        <div class="emoji">📊</div>
+        <div>Could not load data.<br>Make sure data.json is next to the app.</div>
+      </div></div>`;
+  });
+</script>
+</body>
+</html>
