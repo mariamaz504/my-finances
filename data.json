@@ -1,0 +1,32 @@
+{
+  "user": { "name": "Maria", "photo": "" },
+  "month": "August 2026",
+  "currencies": {
+    "primary": "USD",
+    "USD": { "symbol": "$", "position": "before", "rateFromUSD": 1 },
+    "LBP": { "symbol": "LBP", "position": "after", "rateFromUSD": 89000 }
+  },
+  "categories": [
+    { "id": "work", "name": "Work", "icon": "💼", "type": "income" },
+    { "id": "freelance", "name": "Freelance", "icon": "💻", "type": "income" },
+    { "id": "gift", "name": "Gift", "icon": "🎁", "type": "income" },
+    { "id": "other_income", "name": "Other", "icon": "💰", "type": "income" },
+    { "id": "food", "name": "Food", "icon": "🍽️", "type": "expense" },
+    { "id": "transport", "name": "Transport", "icon": "🚗", "type": "expense" },
+    { "id": "shopping", "name": "Shopping", "icon": "🛍️", "type": "expense" },
+    { "id": "bills", "name": "Bills", "icon": "🧾", "type": "expense" },
+    { "id": "health", "name": "Health", "icon": "💊", "type": "expense" },
+    { "id": "fun", "name": "Fun", "icon": "🎉", "type": "expense" },
+    { "id": "other_expense", "name": "Other", "icon": "💸", "type": "expense" }
+  ],
+  "transactions": [
+    {
+      "id": 1,
+      "type": "income",
+      "category": "work",
+      "amount": { "USD": 300, "LBP": 26700000 },
+      "note": "Starting income",
+      "date": "2026-08-22"
+    }
+  ]
+}
