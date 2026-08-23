@@ -544,17 +544,85 @@ function saveTx() {
   });
   closeSheet();
   render();
+  saveTransactions(DATA.transactions).catch(() => {});
 }
 
 document.getElementById('overlay').addEventListener('click', e => {
   if (e.target.id === 'overlay') closeSheet();
 });
 
+// ---- Persistence layer: Telegram CloudStorage (per-account, no server),
+//      with a localStorage fallback when opened outside Telegram. ----
+const STORE_PREFIX = 'fin_tx_';   // chunk keys: fin_tx_0, fin_tx_1, ...
+const STORE_COUNT  = 'fin_tx_chunks';
+const CS = (tg && tg.CloudStorage) ? tg.CloudStorage : null;
+
+function storeGet(key) {
+  return new Promise(resolve => {
+    if (CS) { CS.getItem(key, (err, val) => resolve(err ? null : (val || null))); }
+    else { try { resolve(localStorage.getItem(key)); } catch (_) { resolve(null); } }
+  });
+}
+function storeSet(key, val) {
+  return new Promise(resolve => {
+    if (CS) { CS.setItem(key, val, err => resolve(!err)); }
+    else { try { localStorage.setItem(key, val); resolve(true); } catch (_) { resolve(false); } }
+  });
+}
+function storeKeys() {
+  return new Promise(resolve => {
+    if (CS) { CS.getKeys((err, keys) => resolve(err ? [] : (keys || []))); }
+    else { try { resolve(Object.keys(localStorage)); } catch (_) { resolve([]); } }
+  });
+}
+function storeRemove(key) {
+  return new Promise(resolve => {
+    if (CS) { CS.removeItem(key, () => resolve(true)); }
+    else { try { localStorage.removeItem(key); } catch (_) {} resolve(true); }
+  });
+}
+
+// Load the saved transactions array, or null if never saved yet.
+async function loadTransactions() {
+  const cntStr = await storeGet(STORE_COUNT);
+  if (cntStr === null) return null;               // not initialised → first run
+  const n = parseInt(cntStr, 10) || 0;
+  let s = '';
+  for (let i = 0; i < n; i++) s += (await storeGet(STORE_PREFIX + i)) || '';
+  try { return JSON.parse(s); } catch (_) { return null; }
+}
+// Save the transactions array, split into ≤3800-char chunks (CloudStorage cap is 4096/value).
+async function saveTransactions(txs) {
+  const s = JSON.stringify(txs || []);
+  const SIZE = 3800;
+  const chunks = [];
+  for (let i = 0; i < s.length; i += SIZE) chunks.push(s.slice(i, i + SIZE));
+  if (chunks.length === 0) chunks.push('[]');
+  for (let i = 0; i < chunks.length; i++) await storeSet(STORE_PREFIX + i, chunks[i]);
+  await storeSet(STORE_COUNT, String(chunks.length));
+  // drop any stale chunks left over from a previously larger save
+  const keys = await storeKeys();
+  for (const k of keys) {
+    if (k.indexOf(STORE_PREFIX) === 0) {
+      const idx = parseInt(k.slice(STORE_PREFIX.length), 10);
+      if (!isNaN(idx) && idx >= chunks.length) await storeRemove(k);
+    }
+  }
+}
+
 fetch('data.json?v=' + Date.now())
   .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-  .then(d => {
+  .then(async d => {
     DATA = d;
     if (DATA.currencies && DATA.currencies.primary) activeCurrency = DATA.currencies.primary;
+    // Prefer saved transactions; on first run, seed storage from data.json.
+    let saved = null;
+    try { saved = await loadTransactions(); } catch (_) {}
+    if (saved && Array.isArray(saved)) {
+      DATA.transactions = saved;
+    } else {
+      try { await saveTransactions(DATA.transactions || []); } catch (_) {}
+    }
     render();
   })
   .catch(() => {
