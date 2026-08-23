@@ -17,6 +17,7 @@
     { "id": "bills", "name": "Bills", "icon": "🧾", "type": "expense" },
     { "id": "health", "name": "Health", "icon": "💊", "type": "expense" },
     { "id": "fun", "name": "Fun", "icon": "🎉", "type": "expense" },
+    { "id": "pet", "name": "Pet", "icon": "🐾", "type": "expense" },
     { "id": "other_expense", "name": "Other", "icon": "💸", "type": "expense" }
   ],
   "transactions": [
@@ -26,6 +27,22 @@
       "category": "work",
       "amount": { "USD": 300, "LBP": 26700000 },
       "note": "Starting income",
+      "date": "2026-08-22"
+    },
+    {
+      "id": 2,
+      "type": "expense",
+      "category": "pet",
+      "amount": { "USD": 50, "LBP": 4450000 },
+      "note": "Dry food for Maxy",
+      "date": "2026-08-22"
+    },
+    {
+      "id": 3,
+      "type": "expense",
+      "category": "transport",
+      "amount": { "USD": 6, "LBP": 534000 },
+      "note": "Car wash",
       "date": "2026-08-22"
     }
   ]
