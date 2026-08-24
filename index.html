@@ -178,7 +178,7 @@
 <div class="nav" id="nav">
   <button class="nav-btn active" data-tab="home" onclick="switchTab('home')"><span class="nav-ico">🏠</span><span class="nav-lbl">Home</span></button>
   <button class="nav-btn" data-tab="stats" onclick="switchTab('stats')"><span class="nav-ico">📊</span><span class="nav-lbl">Stats</span></button>
-  <button class="nav-btn" data-tab="savings" onclick="switchTab('savings')"><span class="nav-ico">🐷</span><span class="nav-lbl">Savings</span></button>
+  <button class="nav-btn" data-tab="savings" onclick="switchTab('savings')"><span class="nav-ico">🏦</span><span class="nav-lbl">Savings</span></button>
   <button class="nav-btn" data-tab="clients" onclick="switchTab('clients')"><span class="nav-ico">👥</span><span class="nav-lbl">Clients</span></button>
 </div>
 
@@ -210,6 +210,18 @@
     <div class="sheet-actions">
       <button class="btn-cancel" onclick="closeGoalSheet()">Cancel</button>
       <button class="btn-save" onclick="saveGoalAdd()">Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="clientOverlay">
+  <div class="sheet">
+    <div class="sheet-title">Add client</div>
+    <div class="field"><label>Client name</label><input type="text" id="cName" placeholder="e.g. Nour Boutique"></div>
+    <div class="err" id="clientErr2">Enter a name</div>
+    <div class="sheet-actions">
+      <button class="btn-cancel" onclick="closeClientSheet()">Cancel</button>
+      <button class="btn-save" onclick="saveClient()">Add</button>
     </div>
   </div>
 </div>
@@ -437,6 +449,7 @@ function renderSavings(){
     <div class="page-pad">
       <div class="h1">Savings</div><div class="sub">Goals and total set aside</div>
       <div class="save-hero">${heroInner}</div>
+      <button onclick="openPotSheet()" style="width:100%;border:none;background:linear-gradient(135deg,var(--save),var(--save-dark));color:#fff;border-radius:14px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:16px">＋ Add to savings</button>
       <div class="panel">
         <div class="toggle-row"><div style="font-size:14px;font-weight:700">Auto-save from income</div>
           <label class="switch"><input type="checkbox" id="autoSaveToggle" ${s.autoSaveEnabled?'checked':''} onchange="toggleAutoSave(this.checked)"><span class="slider"></span></label>
@@ -472,22 +485,44 @@ function openGoalSheet(id){ goalTargetId=id; const g=DATA.savings.goals.find(x=>
   document.getElementById('goalSheetTitle').textContent='Add to '+g.name;
   document.getElementById('gAmount').value=''; document.getElementById('goalErr').style.display='none';
   document.getElementById('goalOverlay').classList.add('open'); }
+function openPotSheet(){ goalTargetId='__pot__';
+  document.getElementById('goalSheetTitle').textContent='Add to savings';
+  document.getElementById('gAmount').value=''; document.getElementById('goalErr').style.display='none';
+  document.getElementById('goalOverlay').classList.add('open'); }
 function closeGoalSheet(){ document.getElementById('goalOverlay').classList.remove('open'); }
 function saveGoalAdd(){
   const entered=parseFloat(document.getElementById('gAmount').value);
   if(!entered||entered<=0){ document.getElementById('goalErr').style.display='block'; return; }
-  const usd=toUSD(entered); const g=DATA.savings.goals.find(x=>x.id===goalTargetId);
-  Object.keys(g.saved).forEach(k=>{ g.saved[k]+=usd*(DATA.currencies[k].rateFromUSD||1); });
+  const usd=toUSD(entered);
+  if(goalTargetId==='__pot__'){
+    Object.keys(DATA.savings.pot).forEach(k=>{ DATA.savings.pot[k]+=usd*(DATA.currencies[k].rateFromUSD||1); });
+  } else {
+    const g=DATA.savings.goals.find(x=>x.id===goalTargetId);
+    Object.keys(g.saved).forEach(k=>{ g.saved[k]+=usd*(DATA.currencies[k].rateFromUSD||1); });
+  }
   closeGoalSheet(); renderSavings(); saveState();
+}
+// ---- Clients: add a client directly ----
+function openClientSheet(){ document.getElementById('cName').value=''; document.getElementById('clientErr2').style.display='none'; document.getElementById('clientOverlay').classList.add('open'); }
+function closeClientSheet(){ document.getElementById('clientOverlay').classList.remove('open'); }
+function saveClient(){
+  const n=document.getElementById('cName').value.trim();
+  if(!n){ document.getElementById('clientErr2').style.display='block'; return; }
+  if(!DATA.clients) DATA.clients=[];
+  if(!DATA.clients.includes(n)) DATA.clients.push(n);
+  closeClientSheet(); renderClients(); saveState();
 }
 
 function renderClients(){
   const incomeTx=DATA.transactions.filter(t=>t.type==='income'&&t.client);
   const byClient={};
+  // seed with every saved client (so newly-added clients show even with no income yet)
+  (DATA.clients||[]).forEach(name=>{ byClient[name]={total:0,count:0,last:null,source:null}; });
   incomeTx.forEach(t=>{
-    if(!byClient[t.client]) byClient[t.client]={total:0,count:0,last:null,source:catById(t.category).name};
+    if(!byClient[t.client]) byClient[t.client]={total:0,count:0,last:null,source:null};
     byClient[t.client].total+=cval(t.amount);
     byClient[t.client].count++;
+    if(!byClient[t.client].source) byClient[t.client].source=catById(t.category).name;
     if(!byClient[t.client].last || new Date(t.date)>new Date(byClient[t.client].last)) byClient[t.client].last=t.date;
   });
   const clients=Object.entries(byClient).sort((a,b)=>b[1].total-a[1].total);
@@ -502,15 +537,16 @@ function renderClients(){
     <div class="client-card">
       <div class="client-top"><div class="client-name">${name}</div><div class="client-total">${money(c.total)}</div></div>
       <div class="client-meta">
-        <span class="chip">${c.source}</span>
-        <span class="meta-sub">${c.count} payment${c.count>1?'s':''}</span>
-        <span class="meta-sub">· last ${fmtDate(c.last)}</span>
+        <span class="chip">${c.source||'No income yet'}</span>
+        <span class="meta-sub">${c.count} payment${c.count!==1?'s':''}</span>
+        ${c.last?`<span class="meta-sub">· last ${fmtDate(c.last)}</span>`:''}
       </div>
-    </div>`).join('') || '<div class="empty">No clients yet. Add an income and tag a client.</div>';
+    </div>`).join('') || '<div class="empty">No clients yet.</div>';
 
   document.getElementById('tab-clients').innerHTML=`
     <div class="page-pad">
       <div class="h1">Clients</div><div class="sub">Where your income comes from</div>
+      <button onclick="openClientSheet()" style="width:100%;border:none;background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:#fff;border-radius:14px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:16px">＋ Add client</button>
       <div class="panel"><div class="panel-title">By income source</div>${sourceRows}</div>
       <div class="section-title">All clients</div>
       ${clientCards}
@@ -576,6 +612,7 @@ function saveTx(){
 
 document.getElementById('overlay').addEventListener('click', e=>{ if(e.target.id==='overlay') closeSheet(); });
 document.getElementById('goalOverlay').addEventListener('click', e=>{ if(e.target.id==='goalOverlay') closeGoalSheet(); });
+document.getElementById('clientOverlay').addEventListener('click', e=>{ if(e.target.id==='clientOverlay') closeClientSheet(); });
 document.getElementById('fAmount').addEventListener('input', ()=>document.getElementById('txErr').style.display='none');
 document.getElementById('gAmount').addEventListener('input', ()=>document.getElementById('goalErr').style.display='none');
 document.getElementById('fClient').addEventListener('change', onClientChange);
@@ -584,7 +621,7 @@ document.getElementById('fClient').addEventListener('change', onClientChange);
         to Telegram CloudStorage — per-account, no server. localStorage fallback
         for plain-browser preview. A SEED_VERSION lets a new data.json push a fresh
         dataset (it overwrites saved state once, then the user's edits persist). ---- */
-const SEED_VERSION='2026-08-24d';
+const SEED_VERSION='2026-08-24e';
 const STORE_PREFIX='fin_st_', STORE_COUNT='fin_st_chunks', STORE_SEED='fin_seed_ver';
 const CS=(tg && tg.CloudStorage) ? tg.CloudStorage : null;
 function sGet(k){ return new Promise(r=>{ if(CS){CS.getItem(k,(e,v)=>r(e?null:(v||null)));} else {try{r(localStorage.getItem(k));}catch(_){r(null);}} }); }
