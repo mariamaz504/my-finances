@@ -227,7 +227,7 @@
 </div>
 
 <script>
-let DATA=null, activeCurrency='USD', selectedDay=null, currentType='expense', currentTab='home', goalTargetId=null, savingsRevealed=false;
+let DATA=null, activeCurrency='USD', selectedDay=null, currentType='expense', currentTab='home', goalTargetId=null, savingsRevealed=false, hasPin=false;
 const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const tg=window.Telegram && window.Telegram.WebApp;
 if(tg){ tg.ready(); tg.expand(); }
@@ -416,31 +416,28 @@ function buildDonut(values, colors){
   return `<svg width="160" height="160" viewBox="0 0 42 42" style="transform:rotate(-90deg)"><circle cx="21" cy="21" r="15.9155" fill="none" stroke="var(--line)" stroke-width="6"/>${segs}</svg>`;
 }
 
+function savingsLocked(){ return (DATA.savings.lockEnabled!==false) && !savingsRevealed; }
+
 function renderSavings(){
   const s=DATA.savings;
+  if(savingsLocked()){ renderSavingsLock(); return; }
   const goalsSaved=s.goals.reduce((a,g)=>a+cval(g.saved),0);
   const total=cval(s.pot)+goalsSaved;
-  const locked = s.biometricLock && !savingsRevealed;
 
-  const heroInner = locked
-    ? `<div style="font-size:13px;opacity:0.85">Total saved</div>
-       <div style="font-size:32px;font-weight:800;letter-spacing:2px">••••••</div>
-       <button onclick="unlockSavings()" style="margin-top:10px;border:none;background:rgba(255,255,255,0.9);color:var(--save-dark);border-radius:12px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px">🔒 Unlock with fingerprint</button>`
-    : `<div style="display:flex;justify-content:space-between;align-items:flex-start">
-         <div><div style="font-size:13px;opacity:0.85">Total saved</div><div style="font-size:32px;font-weight:800">${money(total)}</div>
-         <div style="font-size:12px;opacity:0.8;margin-top:4px">${money(cval(s.pot))} in general pot · ${money(goalsSaved)} in goals</div></div>
-         ${s.biometricLock?`<button onclick="hideSavings()" title="Hide" style="border:none;background:rgba(255,255,255,0.25);color:#fff;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Hide</button>`:''}
-       </div>`;
+  const heroInner=`<div style="display:flex;justify-content:space-between;align-items:flex-start">
+       <div><div style="font-size:13px;opacity:0.85">Total saved</div><div style="font-size:32px;font-weight:800">${money(total)}</div>
+       <div style="font-size:12px;opacity:0.8;margin-top:4px">${money(cval(s.pot))} in general pot · ${money(goalsSaved)} in goals</div></div>
+       <button onclick="lockSavings()" title="Lock" style="border:none;background:rgba(255,255,255,0.25);color:#fff;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔒 Lock</button>
+     </div>`;
 
   const goalsHtml=s.goals.map(g=>{
     const saved=cval(g.saved), target=cval(g.target);
     const pct=Math.min(100,Math.round(saved/target*100));
     const col = pct>=100?'var(--save)':'var(--accent)';
-    const savedText = locked ? '••••' : money(saved);
     return `<div class="goal">
-      <div class="goal-top"><div class="goal-name">${g.name}</div><div class="goal-pct">${locked?'':pct+'%'}</div></div>
-      <div class="goal-nums">${savedText} <span style="opacity:0.6">/ ${money(target)}</span></div>
-      <div class="goal-track"><div class="goal-fill" style="width:${locked?0:pct}%;background:${col}"></div></div>
+      <div class="goal-top"><div class="goal-name">${g.name}</div><div class="goal-pct">${pct}%</div></div>
+      <div class="goal-nums">${money(saved)} <span style="opacity:0.6">/ ${money(target)}</span></div>
+      <div class="goal-track"><div class="goal-fill" style="width:${pct}%;background:${col}"></div></div>
       <button class="goal-add" onclick="openGoalSheet('${g.id}')">+ Add to goal</button>
     </div>`;
   }).join('');
@@ -459,20 +456,74 @@ function renderSavings(){
       </div>
       <div class="section-title">Goals</div>
       ${goalsHtml}
+      <button onclick="changePin()" style="width:100%;border:none;background:transparent;color:var(--sand-ink);padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:6px">Change PIN</button>
     </div>`;
 }
 
-function hideSavings(){ savingsRevealed=false; renderSavings(); }
+function renderSavingsLock(){
+  const bioAvail = !!(tg && tg.BiometricManager);
+  const body = !hasPin
+    ? `<div class="panel">
+         <div class="panel-title">🔒 Protect your savings</div>
+         <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Create a 4-digit PIN. Only you will see your savings.</div>
+         <div class="field"><label>New PIN</label><input type="password" id="sPin1" inputmode="numeric" maxlength="4" placeholder="••••"></div>
+         <div class="field"><label>Confirm PIN</label><input type="password" id="sPin2" inputmode="numeric" maxlength="4" placeholder="••••"></div>
+         <div class="err" id="sPinErr"></div>
+         <button class="btn-save" style="width:100%" onclick="setSavingsPin()">Set PIN</button>
+       </div>`
+    : `<div class="panel">
+         <div class="panel-title">🔒 Savings locked</div>
+         <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Enter your PIN to view your savings.</div>
+         <div class="field"><label>PIN</label><input type="password" id="sPinEntry" inputmode="numeric" maxlength="4" placeholder="••••"></div>
+         <div class="err" id="sPinErr"></div>
+         <button class="btn-save" style="width:100%;margin-bottom:10px" onclick="submitSavingsPin()">Unlock</button>
+         ${bioAvail?`<button onclick="unlockSavingsBio()" style="width:100%;border:none;background:var(--sand);color:var(--sand-ink);border-radius:13px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">👆 Use fingerprint</button>`:''}
+       </div>`;
+  document.getElementById('tab-savings').innerHTML=`
+    <div class="page-pad">
+      <div class="h1">Savings</div><div class="sub">Private — protected by your PIN</div>
+      <div class="save-hero" style="text-align:center">
+        <div style="font-size:13px;opacity:0.85">Total saved</div>
+        <div style="font-size:32px;font-weight:800;letter-spacing:3px">••••••</div>
+      </div>
+      ${body}
+    </div>`;
+}
 
-function unlockSavings(){
-  const bio = tg && tg.BiometricManager;
+function lockSavings(){ savingsRevealed=false; renderSavings(); }
+function changePin(){ hasPin=false; savingsRevealed=false; renderSavings(); }
+
+async function hashPin(pin){
+  try{
+    const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode('finpin:'+pin));
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }catch(_){ let h=5381; for(let i=0;i<pin.length;i++) h=((h<<5)+h)+pin.charCodeAt(i); return 'x'+(h>>>0); }
+}
+function pinErr(msg){ const e=document.getElementById('sPinErr'); if(e){ e.textContent=msg; e.style.display='block'; } }
+
+async function setSavingsPin(){
+  const p1=(document.getElementById('sPin1').value||'').trim();
+  const p2=(document.getElementById('sPin2').value||'').trim();
+  if(!/^\d{4}$/.test(p1)){ pinErr('PIN must be 4 digits'); return; }
+  if(p1!==p2){ pinErr('PINs do not match'); return; }
+  await sSet('fin_pin', await hashPin(p1));
+  hasPin=true; savingsRevealed=true; renderSavings();
+}
+async function submitSavingsPin(){
+  const p=(document.getElementById('sPinEntry').value||'').trim();
+  const stored=await sGet('fin_pin');
+  if(stored && (await hashPin(p))===stored){ savingsRevealed=true; renderSavings(); }
+  else pinErr('Wrong PIN');
+}
+function unlockSavingsBio(){
+  const bio=tg && tg.BiometricManager;
   const reveal=()=>{ savingsRevealed=true; renderSavings(); };
-  if(!bio){ reveal(); return; }               // no biometric API (browser/old Telegram) → just show
+  if(!bio){ pinErr('Fingerprint not available — use PIN'); return; }
   const proceed=()=>{
-    if(bio.isBiometricAvailable===false){ reveal(); return; }  // device has no fingerprint/face
+    if(bio.isBiometricAvailable===false){ pinErr('Fingerprint not available on this device — use PIN'); return; }
     const auth=()=> bio.authenticate({ reason:'Unlock your savings' }, ok=>{ if(ok) reveal(); });
     if(bio.isAccessGranted){ auth(); }
-    else if(bio.requestAccess){ bio.requestAccess({ reason:'Protect your savings with biometrics' }, granted=>{ granted ? auth() : reveal(); }); }
+    else if(bio.requestAccess){ bio.requestAccess({ reason:'Protect your savings' }, g=>{ if(g) auth(); }); }
     else { auth(); }
   };
   if(!bio.isInited && bio.init){ bio.init(proceed); } else { proceed(); }
@@ -621,7 +672,7 @@ document.getElementById('fClient').addEventListener('change', onClientChange);
         to Telegram CloudStorage — per-account, no server. localStorage fallback
         for plain-browser preview. A SEED_VERSION lets a new data.json push a fresh
         dataset (it overwrites saved state once, then the user's edits persist). ---- */
-const SEED_VERSION='2026-08-24e';
+const SEED_VERSION='2026-08-24f';
 const STORE_PREFIX='fin_st_', STORE_COUNT='fin_st_chunks', STORE_SEED='fin_seed_ver';
 const CS=(tg && tg.CloudStorage) ? tg.CloudStorage : null;
 function sGet(k){ return new Promise(r=>{ if(CS){CS.getItem(k,(e,v)=>r(e?null:(v||null)));} else {try{r(localStorage.getItem(k));}catch(_){r(null);}} }); }
@@ -651,6 +702,7 @@ fetch('data.json?v=' + Date.now())
   .then(async d=>{
     DATA=d;
     if(DATA.currencies && DATA.currencies.primary) activeCurrency=DATA.currencies.primary;
+    hasPin = !!(await sGet('fin_pin'));
     const seedVer=await sGet(STORE_SEED);
     if(seedVer===SEED_VERSION){
       const saved=await loadState();
