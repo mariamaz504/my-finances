@@ -32,6 +32,8 @@
     "biometricLock": false
   },
   "transactions": [
-    { "id": 1, "type": "income", "category": "design", "amount": { "USD": 300, "LBP": 26850000 }, "note": "Teaching AI courses", "date": "2026-08-22" }
+    { "id": 1, "type": "income", "category": "design", "amount": { "USD": 300, "LBP": 26850000 }, "note": "Teaching AI courses", "date": "2026-08-22" },
+    { "id": 2, "type": "expense", "category": "pet", "amount": { "USD": 50, "LBP": 4475000 }, "note": "Dry food for Maxy", "date": "2026-08-23" },
+    { "id": 3, "type": "expense", "category": "transport", "amount": { "USD": 6, "LBP": 537000 }, "note": "Car wash", "date": "2026-08-23" }
   ]
 }
