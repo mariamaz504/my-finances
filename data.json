@@ -25,7 +25,7 @@
   ],
   "clients": [],
   "savings": {
-    "pot": { "USD": 0, "LBP": 0 },
+    "pot": { "USD": 6300, "LBP": 563850000 },
     "autoSaveEnabled": false,
     "autoSavePercent": 10,
     "goals": [],
