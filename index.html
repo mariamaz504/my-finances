@@ -453,17 +453,16 @@ function hideSavings(){ savingsRevealed=false; renderSavings(); }
 
 function unlockSavings(){
   const bio = tg && tg.BiometricManager;
-  if(bio){
-    const proceed=()=>{
-      bio.authenticate({ reason:'Unlock your savings' }, (ok)=>{
-        if(ok){ savingsRevealed=true; renderSavings(); }
-      });
-    };
-    if(!bio.isInited){ bio.init(proceed); } else { proceed(); }
-  } else {
-    // Fallback for plain browser / preview: no biometric hardware available
-    savingsRevealed=true; renderSavings();
-  }
+  const reveal=()=>{ savingsRevealed=true; renderSavings(); };
+  if(!bio){ reveal(); return; }               // no biometric API (browser/old Telegram) → just show
+  const proceed=()=>{
+    if(bio.isBiometricAvailable===false){ reveal(); return; }  // device has no fingerprint/face
+    const auth=()=> bio.authenticate({ reason:'Unlock your savings' }, ok=>{ if(ok) reveal(); });
+    if(bio.isAccessGranted){ auth(); }
+    else if(bio.requestAccess){ bio.requestAccess({ reason:'Protect your savings with biometrics' }, granted=>{ granted ? auth() : reveal(); }); }
+    else { auth(); }
+  };
+  if(!bio.isInited && bio.init){ bio.init(proceed); } else { proceed(); }
 }
 
 function toggleAutoSave(on){ DATA.savings.autoSaveEnabled=on; saveState(); }
@@ -585,7 +584,7 @@ document.getElementById('fClient').addEventListener('change', onClientChange);
         to Telegram CloudStorage — per-account, no server. localStorage fallback
         for plain-browser preview. A SEED_VERSION lets a new data.json push a fresh
         dataset (it overwrites saved state once, then the user's edits persist). ---- */
-const SEED_VERSION='2026-08-24b';
+const SEED_VERSION='2026-08-24c';
 const STORE_PREFIX='fin_st_', STORE_COUNT='fin_st_chunks', STORE_SEED='fin_seed_ver';
 const CS=(tg && tg.CloudStorage) ? tg.CloudStorage : null;
 function sGet(k){ return new Promise(r=>{ if(CS){CS.getItem(k,(e,v)=>r(e?null:(v||null)));} else {try{r(localStorage.getItem(k));}catch(_){r(null);}} }); }
