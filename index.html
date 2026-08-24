@@ -584,7 +584,7 @@ document.getElementById('fClient').addEventListener('change', onClientChange);
         to Telegram CloudStorage — per-account, no server. localStorage fallback
         for plain-browser preview. A SEED_VERSION lets a new data.json push a fresh
         dataset (it overwrites saved state once, then the user's edits persist). ---- */
-const SEED_VERSION='2026-08-24c';
+const SEED_VERSION='2026-08-24d';
 const STORE_PREFIX='fin_st_', STORE_COUNT='fin_st_chunks', STORE_SEED='fin_seed_ver';
 const CS=(tg && tg.CloudStorage) ? tg.CloudStorage : null;
 function sGet(k){ return new Promise(r=>{ if(CS){CS.getItem(k,(e,v)=>r(e?null:(v||null)));} else {try{r(localStorage.getItem(k));}catch(_){r(null);}} }); }
