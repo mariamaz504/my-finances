@@ -23,32 +23,15 @@
     { "id": "bills", "name": "Bills", "icon": "🧾", "type": "expense" },
     { "id": "pet", "name": "Pet", "icon": "🐾", "type": "expense" }
   ],
-  "clients": [
-    "Acme Studio",
-    "Nour Boutique",
-    "Employer Co.",
-    "AI School (Baabdat)"
-  ],
+  "clients": [],
   "savings": {
-    "pot": { "USD": 1750, "LBP": 156625000 },
-    "autoSaveEnabled": true,
+    "pot": { "USD": 0, "LBP": 0 },
+    "autoSaveEnabled": false,
     "autoSavePercent": 10,
-    "goals": [
-      { "id": "g1", "name": "Emergency fund", "target": { "USD": 5000, "LBP": 447500000 }, "saved": { "USD": 3200, "LBP": 286400000 } },
-      { "id": "g2", "name": "New laptop", "target": { "USD": 1500, "LBP": 134250000 }, "saved": { "USD": 900, "LBP": 80550000 } },
-      { "id": "g3", "name": "Vacation", "target": { "USD": 2000, "LBP": 179000000 }, "saved": { "USD": 450, "LBP": 40275000 } }
-    ],
-    "biometricLock": true
+    "goals": [],
+    "biometricLock": false
   },
   "transactions": [
-    { "id": 1, "type": "income", "category": "salary", "amount": { "USD": 2200, "LBP": 196900000 }, "note": "August salary", "date": "2026-08-20", "client": "Employer Co." },
-    { "id": 2, "type": "expense", "category": "food", "amount": { "USD": 68, "LBP": 6086000 }, "note": "Corner store", "date": "2026-08-20" },
-    { "id": 3, "type": "expense", "category": "cafe", "amount": { "USD": 14, "LBP": 1253000 }, "note": "Coffee with a friend", "date": "2026-08-19" },
-    { "id": 4, "type": "income", "category": "freelance", "amount": { "USD": 450, "LBP": 40275000 }, "note": "Design project", "date": "2026-08-18", "client": "Acme Studio" },
-    { "id": 5, "type": "income", "category": "freelance", "amount": { "USD": 1200, "LBP": 107400000 }, "note": "Branding package", "date": "2026-08-12", "client": "Nour Boutique" },
-    { "id": 6, "type": "expense", "category": "transport", "amount": { "USD": 12, "LBP": 1074000 }, "note": "Taxi", "date": "2026-08-18" },
-    { "id": 7, "type": "expense", "category": "shopping", "amount": { "USD": 89, "LBP": 7965500 }, "note": "New bag", "date": "2026-08-17" },
-    { "id": 8, "type": "expense", "category": "bills", "amount": { "USD": 120, "LBP": 10740000 }, "note": "Internet and phone", "date": "2026-08-16" },
-    { "id": 9, "type": "income", "category": "design", "amount": { "USD": 300, "LBP": 26850000 }, "note": "Teaching AI courses", "date": "2026-08-09", "client": "AI School (Baabdat)" }
+    { "id": 1, "type": "income", "category": "design", "amount": { "USD": 300, "LBP": 26850000 }, "note": "Teaching AI courses", "date": "2026-08-22" }
   ]
 }
