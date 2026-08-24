@@ -29,7 +29,8 @@
     "autoSaveEnabled": false,
     "autoSavePercent": 10,
     "goals": [],
-    "biometricLock": false
+    "lockEnabled": true,
+    "biometricLock": true
   },
   "transactions": [
     { "id": 1, "type": "income", "category": "design", "amount": { "USD": 300, "LBP": 26850000 }, "note": "Teaching AI courses", "date": "2026-08-22" },
