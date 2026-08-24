@@ -1,49 +1,54 @@
 {
-  "user": { "name": "Maria Mazraani", "photo": "avatar.png?v=9", "coverColor": "#b69f87", "role": "Teacher, Digital Media & AI Specialist" },
-  "month": "August 2026",
+  "user": {
+    "name": "Maria Mazraani",
+    "photo": "avatar.png?v=9",
+    "coverColor": "#b69f87",
+    "role": "Teacher, Digital Media & AI Specialist"
+  },
   "currencies": {
     "primary": "USD",
-    "USD": { "symbol": "$", "position": "before", "rateFromUSD": 1 },
-    "LBP": { "symbol": "LBP", "position": "after", "rateFromUSD": 89000 }
+    "USD": { "code": "USD", "symbol": "$", "position": "before", "rateFromUSD": 1 },
+    "LBP": { "code": "LBP", "symbol": "LBP", "position": "after", "rateFromUSD": 89500 }
   },
+  "month": "August 2026",
   "categories": [
-    { "id": "work", "name": "Work", "icon": "💼", "type": "income" },
+    { "id": "salary", "name": "Salary", "icon": "💼", "type": "income" },
     { "id": "freelance", "name": "Freelance", "icon": "💻", "type": "income" },
-    { "id": "gift", "name": "Gift", "icon": "🎁", "type": "income" },
-    { "id": "other_income", "name": "Other", "icon": "💰", "type": "income" },
-    { "id": "food", "name": "Food", "icon": "🍽️", "type": "expense" },
+    { "id": "design", "name": "AI School (Baabdat)", "icon": "🎓", "type": "income" },
+    { "id": "gift", "name": "Gifts", "icon": "🎁", "type": "income" },
+    { "id": "food", "name": "Groceries", "icon": "🛒", "type": "expense" },
     { "id": "transport", "name": "Transport", "icon": "🚗", "type": "expense" },
+    { "id": "cafe", "name": "Cafe", "icon": "☕", "type": "expense" },
     { "id": "shopping", "name": "Shopping", "icon": "🛍️", "type": "expense" },
     { "id": "bills", "name": "Bills", "icon": "🧾", "type": "expense" },
-    { "id": "health", "name": "Health", "icon": "💊", "type": "expense" },
-    { "id": "fun", "name": "Fun", "icon": "🎉", "type": "expense" },
-    { "id": "pet", "name": "Pet", "icon": "🐾", "type": "expense" },
-    { "id": "other_expense", "name": "Other", "icon": "💸", "type": "expense" }
+    { "id": "pet", "name": "Pet", "icon": "🐾", "type": "expense" }
   ],
+  "clients": [
+    "Acme Studio",
+    "Nour Boutique",
+    "Employer Co.",
+    "AI School (Baabdat)"
+  ],
+  "savings": {
+    "pot": { "USD": 1750, "LBP": 156625000 },
+    "autoSaveEnabled": true,
+    "autoSavePercent": 10,
+    "goals": [
+      { "id": "g1", "name": "Emergency fund", "target": { "USD": 5000, "LBP": 447500000 }, "saved": { "USD": 3200, "LBP": 286400000 } },
+      { "id": "g2", "name": "New laptop", "target": { "USD": 1500, "LBP": 134250000 }, "saved": { "USD": 900, "LBP": 80550000 } },
+      { "id": "g3", "name": "Vacation", "target": { "USD": 2000, "LBP": 179000000 }, "saved": { "USD": 450, "LBP": 40275000 } }
+    ],
+    "biometricLock": true
+  },
   "transactions": [
-    {
-      "id": 1,
-      "type": "income",
-      "category": "work",
-      "amount": { "USD": 300, "LBP": 26700000 },
-      "note": "Starting income",
-      "date": "2026-08-22"
-    },
-    {
-      "id": 2,
-      "type": "expense",
-      "category": "pet",
-      "amount": { "USD": 50, "LBP": 4450000 },
-      "note": "Dry food for Maxy",
-      "date": "2026-08-22"
-    },
-    {
-      "id": 3,
-      "type": "expense",
-      "category": "transport",
-      "amount": { "USD": 6, "LBP": 534000 },
-      "note": "Car wash",
-      "date": "2026-08-22"
-    }
+    { "id": 1, "type": "income", "category": "salary", "amount": { "USD": 2200, "LBP": 196900000 }, "note": "August salary", "date": "2026-08-20", "client": "Employer Co." },
+    { "id": 2, "type": "expense", "category": "food", "amount": { "USD": 68, "LBP": 6086000 }, "note": "Corner store", "date": "2026-08-20" },
+    { "id": 3, "type": "expense", "category": "cafe", "amount": { "USD": 14, "LBP": 1253000 }, "note": "Coffee with a friend", "date": "2026-08-19" },
+    { "id": 4, "type": "income", "category": "freelance", "amount": { "USD": 450, "LBP": 40275000 }, "note": "Design project", "date": "2026-08-18", "client": "Acme Studio" },
+    { "id": 5, "type": "income", "category": "freelance", "amount": { "USD": 1200, "LBP": 107400000 }, "note": "Branding package", "date": "2026-08-12", "client": "Nour Boutique" },
+    { "id": 6, "type": "expense", "category": "transport", "amount": { "USD": 12, "LBP": 1074000 }, "note": "Taxi", "date": "2026-08-18" },
+    { "id": 7, "type": "expense", "category": "shopping", "amount": { "USD": 89, "LBP": 7965500 }, "note": "New bag", "date": "2026-08-17" },
+    { "id": 8, "type": "expense", "category": "bills", "amount": { "USD": 120, "LBP": 10740000 }, "note": "Internet and phone", "date": "2026-08-16" },
+    { "id": 9, "type": "income", "category": "design", "amount": { "USD": 300, "LBP": 26850000 }, "note": "Teaching AI courses", "date": "2026-08-09", "client": "AI School (Baabdat)" }
   ]
 }
