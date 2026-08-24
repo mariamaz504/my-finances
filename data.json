@@ -1,5 +1,5 @@
 {
-  "user": { "name": "Maria", "photo": "cover.jpg?v=8" },
+  "user": { "name": "Maria", "photo": "avatar.png?v=9", "coverColor": "#b69f87" },
   "month": "August 2026",
   "currencies": {
     "primary": "USD",
