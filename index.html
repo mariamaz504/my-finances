@@ -184,7 +184,7 @@
 
 <div class="overlay" id="overlay">
   <div class="sheet">
-    <div class="sheet-title">New transaction</div>
+    <div class="sheet-title" id="txSheetTitle">New transaction</div>
     <div class="toggle">
       <button id="tExpense" class="active" onclick="setType('expense')">Expense</button>
       <button id="tIncome" onclick="setType('income')">Income</button>
@@ -200,6 +200,7 @@
       <button class="btn-cancel" onclick="closeSheet()">Cancel</button>
       <button class="btn-save" onclick="saveTx()">Save</button>
     </div>
+    <button id="txDelete" onclick="deleteTx()" style="display:none;width:100%;margin-top:10px;border:none;background:var(--expense-bg);color:var(--expense);border-radius:13px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">🗑 Delete this entry</button>
   </div>
 </div>
 
@@ -228,7 +229,7 @@
 </div>
 
 <script>
-let DATA=null, activeCurrency='USD', selectedDay=null, currentType='expense', currentTab='home', goalTargetId=null, savingsRevealed=false, hasPin=false;
+let DATA=null, activeCurrency='USD', selectedDay=null, currentType='expense', currentTab='home', goalTargetId=null, savingsRevealed=false, hasPin=false, editingId=null;
 const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const tg=window.Telegram && window.Telegram.WebApp;
 if(tg){ tg.ready(); tg.expand(); }
@@ -351,7 +352,7 @@ function selectDay(day){
     <div class="day-total inc"><div class="lbl">Gained</div><div class="val">+${money(inc)}</div></div>
     <div class="day-total exp"><div class="lbl">Paid</div><div class="val">−${money(exp)}</div></div></div>`;
   items.forEach(t=>{ const c=catById(t.category); const sign=t.type==='income'?'+':'−';
-    h+=`<div class="tx"><div class="tx-icon ${t.type}">${c.icon}</div><div class="tx-info"><div class="tx-name">${c.name}${t.client?' · '+t.client:''}</div><div class="tx-note">${t.note||''}</div></div><div class="tx-amount ${t.type}">${sign}${money(cval(t.amount))}</div></div>`; });
+    h+=`<div class="tx" style="cursor:pointer" onclick="openEditTx(${t.id})"><div class="tx-icon ${t.type}">${c.icon}</div><div class="tx-info"><div class="tx-name">${c.name}${t.client?' · '+t.client:''}</div><div class="tx-note">${t.note||'Tap to edit'}</div></div><div class="tx-amount ${t.type}">${sign}${money(cval(t.amount))}</div></div>`; });
   box.innerHTML=h;
 }
 
@@ -633,16 +634,39 @@ function setType(type){
   fillCategories();
 }
 function openSheet(){
+  editingId=null;
+  document.getElementById('txSheetTitle').textContent='New transaction';
+  document.getElementById('txDelete').style.display='none';
   currentType='expense'; setType('expense');
   document.getElementById('fAmount').value=''; document.getElementById('fNote').value=''; document.getElementById('fNewClient').value=''; document.getElementById('fNewCategory').value='';
+  const e=document.getElementById('txErr'); e.textContent='Enter an amount'; e.style.display='none';
+  document.getElementById('overlay').classList.add('open');
+}
+function openEditTx(id){
+  const tx=DATA.transactions.find(t=>t.id===id); if(!tx) return;
+  editingId=id;
+  document.getElementById('txSheetTitle').textContent='Edit transaction';
+  document.getElementById('txDelete').style.display='block';
+  if(tx.type==='income' && tx.client && DATA.clients && !DATA.clients.includes(tx.client)) DATA.clients.push(tx.client);
+  currentType=tx.type; setType(tx.type);
+  document.getElementById('fCategory').value=tx.category; onCategoryChange();
+  document.getElementById('fAmount').value=Math.round(cval(tx.amount)*100)/100;
+  document.getElementById('fNote').value=tx.note||'';
+  document.getElementById('fNewCategory').value='';
+  if(tx.type==='income'){ const sel=document.getElementById('fClient'); if(tx.client) sel.value=tx.client; onClientChange(); }
   document.getElementById('txErr').style.display='none';
   document.getElementById('overlay').classList.add('open');
 }
-function closeSheet(){ document.getElementById('overlay').classList.remove('open'); }
+function closeSheet(){ editingId=null; document.getElementById('overlay').classList.remove('open'); }
+function deleteTx(){
+  if(editingId==null) return;
+  DATA.transactions=DATA.transactions.filter(t=>t.id!==editingId);
+  editingId=null; closeSheet(); renderHome(); if(currentTab!=='home') switchTab(currentTab); saveState();
+}
 
 function saveTx(){
   const entered=parseFloat(document.getElementById('fAmount').value);
-  if(!entered||entered<=0){ document.getElementById('txErr').style.display='block'; return; }
+  if(!entered||entered<=0){ const e=document.getElementById('txErr'); e.textContent='Enter an amount'; e.style.display='block'; return; }
   let category=document.getElementById('fCategory').value;
   if(category==='__new__'){
     const nn=document.getElementById('fNewCategory').value.trim();
@@ -653,21 +677,33 @@ function saveTx(){
   }
   const note=document.getElementById('fNote').value.trim();
   const usd=toUSD(entered);
-  const tx={ id:Date.now(), type:currentType, category, amount:makeAmount(usd), note, date:new Date().toISOString().slice(0,10) };
-
+  let client=null;
   if(currentType==='income'){
-    let client=document.getElementById('fClient').value;
+    client=document.getElementById('fClient').value;
     if(client==='__new__'){
       const nc=document.getElementById('fNewClient').value.trim();
       if(nc){ client=nc; if(!DATA.clients.includes(nc)) DATA.clients.push(nc); } else client=null;
     }
-    if(client) tx.client=client;
-    if(DATA.savings.autoSaveEnabled && DATA.savings.autoSavePercent>0){
-      const saveUsd=usd*(DATA.savings.autoSavePercent/100);
-      Object.keys(DATA.savings.pot).forEach(k=>{ DATA.savings.pot[k]+=saveUsd*(DATA.currencies[k].rateFromUSD||1); });
-    }
   }
-  DATA.transactions.push(tx);
+
+  if(editingId!=null){
+    const tx=DATA.transactions.find(t=>t.id===editingId);
+    if(tx){
+      tx.type=currentType; tx.category=category; tx.amount=makeAmount(usd); tx.note=note;
+      if(currentType==='income' && client) tx.client=client; else delete tx.client;
+    }
+    editingId=null;
+  } else {
+    const tx={ id:Date.now(), type:currentType, category, amount:makeAmount(usd), note, date:new Date().toISOString().slice(0,10) };
+    if(currentType==='income'){
+      if(client) tx.client=client;
+      if(DATA.savings.autoSaveEnabled && DATA.savings.autoSavePercent>0){
+        const saveUsd=usd*(DATA.savings.autoSavePercent/100);
+        Object.keys(DATA.savings.pot).forEach(k=>{ DATA.savings.pot[k]+=saveUsd*(DATA.currencies[k].rateFromUSD||1); });
+      }
+    }
+    DATA.transactions.push(tx);
+  }
   closeSheet();
   renderHome();
   if(currentTab!=='home') switchTab(currentTab);
