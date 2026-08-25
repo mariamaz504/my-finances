@@ -190,7 +190,8 @@
       <button id="tIncome" onclick="setType('income')">Income</button>
     </div>
     <div class="field"><label>Amount</label><input type="number" id="fAmount" placeholder="0" inputmode="decimal"></div>
-    <div class="field"><label>Category</label><select id="fCategory"></select></div>
+    <div class="field"><label>Category / name</label><select id="fCategory"></select></div>
+    <div class="field" id="newCategoryField" style="display:none"><label>New name</label><input type="text" id="fNewCategory" placeholder="e.g. ChatGPT subscription"></div>
     <div class="field" id="clientField" style="display:none"><label>Client</label><select id="fClient"></select></div>
     <div class="field" id="newClientField" style="display:none"><label>New client name</label><input type="text" id="fNewClient" placeholder="Client name"></div>
     <div class="field"><label>Note (optional)</label><input type="text" id="fNote" placeholder="e.g. logo project"></div>
@@ -606,7 +607,12 @@ function renderClients(){
 
 function fillCategories(){
   const sel=document.getElementById('fCategory');
-  sel.innerHTML=DATA.categories.filter(c=>c.type===currentType).map(c=>`<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+  sel.innerHTML=DATA.categories.filter(c=>c.type===currentType).map(c=>`<option value="${c.id}">${c.icon} ${c.name}</option>`).join('')
+    + `<option value="__new__">＋ New name…</option>`;
+  onCategoryChange();
+}
+function onCategoryChange(){
+  document.getElementById('newCategoryField').style.display = (document.getElementById('fCategory').value==='__new__') ? 'block' : 'none';
 }
 function fillClients(){
   const sel=document.getElementById('fClient');
@@ -628,7 +634,7 @@ function setType(type){
 }
 function openSheet(){
   currentType='expense'; setType('expense');
-  document.getElementById('fAmount').value=''; document.getElementById('fNote').value=''; document.getElementById('fNewClient').value='';
+  document.getElementById('fAmount').value=''; document.getElementById('fNote').value=''; document.getElementById('fNewClient').value=''; document.getElementById('fNewCategory').value='';
   document.getElementById('txErr').style.display='none';
   document.getElementById('overlay').classList.add('open');
 }
@@ -637,7 +643,14 @@ function closeSheet(){ document.getElementById('overlay').classList.remove('open
 function saveTx(){
   const entered=parseFloat(document.getElementById('fAmount').value);
   if(!entered||entered<=0){ document.getElementById('txErr').style.display='block'; return; }
-  const category=document.getElementById('fCategory').value;
+  let category=document.getElementById('fCategory').value;
+  if(category==='__new__'){
+    const nn=document.getElementById('fNewCategory').value.trim();
+    if(!nn){ const e=document.getElementById('txErr'); e.textContent='Enter a name for this expense'; e.style.display='block'; return; }
+    const id='c'+Date.now();
+    DATA.categories.push({ id, name:nn, icon: currentType==='income'?'💰':'🏷️', type:currentType });
+    category=id;
+  }
   const note=document.getElementById('fNote').value.trim();
   const usd=toUSD(entered);
   const tx={ id:Date.now(), type:currentType, category, amount:makeAmount(usd), note, date:new Date().toISOString().slice(0,10) };
@@ -667,6 +680,7 @@ document.getElementById('clientOverlay').addEventListener('click', e=>{ if(e.tar
 document.getElementById('fAmount').addEventListener('input', ()=>document.getElementById('txErr').style.display='none');
 document.getElementById('gAmount').addEventListener('input', ()=>document.getElementById('goalErr').style.display='none');
 document.getElementById('fClient').addEventListener('change', onClientChange);
+document.getElementById('fCategory').addEventListener('change', onCategoryChange);
 
 /* ---- Persistence: auto-save the mutable state (transactions, clients, savings)
         to Telegram CloudStorage — per-account, no server. localStorage fallback
@@ -687,7 +701,7 @@ async function loadState(){
 }
 async function saveState(){
   if(!DATA) return;
-  const state={ transactions:DATA.transactions, clients:DATA.clients, savings:DATA.savings };
+  const state={ transactions:DATA.transactions, clients:DATA.clients, savings:DATA.savings, categories:DATA.categories };
   const s=JSON.stringify(state), SIZE=3800, chunks=[];
   for(let i=0;i<s.length;i+=SIZE) chunks.push(s.slice(i,i+SIZE));
   if(!chunks.length) chunks.push('{}');
@@ -706,7 +720,7 @@ fetch('data.json?v=' + Date.now())
     const seedVer=await sGet(STORE_SEED);
     if(seedVer===SEED_VERSION){
       const saved=await loadState();
-      if(saved){ if(saved.transactions)DATA.transactions=saved.transactions; if(saved.clients)DATA.clients=saved.clients; if(saved.savings)DATA.savings=saved.savings; }
+      if(saved){ if(saved.transactions)DATA.transactions=saved.transactions; if(saved.clients)DATA.clients=saved.clients; if(saved.savings)DATA.savings=saved.savings; if(saved.categories)DATA.categories=saved.categories; }
     } else {
       await saveState();
       await sSet(STORE_SEED, SEED_VERSION);
